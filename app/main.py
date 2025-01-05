@@ -26,26 +26,22 @@ def load_lottie_url(url):
         return None
 
 # Load animations
-sentiment_animation = "https://assets1.lottiefiles.com/packages/lf20_jcikwtux.json"
-loading_animation = "https://assets10.lottiefiles.com/packages/lf20_jcikwtux.json"  
-
+sentiment_animation = load_lottie_url("https://assets1.lottiefiles.com/packages/lf20_jcikwtux.json")
+loading_animation = load_lottie_url("https://assets10.lottiefiles.com/packages/lf20_jcikwtux.json")  
 
 # Load models and metadata
 try:
     tfidf_vectorizer = joblib.load('models/tfidf_vectorizer.pkl')
     random_forest_model = joblib.load('models/random_forest_model.pkl')
-    print("Pickle files loaded successfully!")
+    lstm_model = tf.keras.models.load_model('models/lstm_sentiment_model.h5')
+    with open('models/tokenizer.json', 'r') as file:
+        tokenizer = json.load(file)
+    bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    bert_model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=3)
 except Exception as e:
-    print("Error loading pickle files:", e)
+    st.error(f"Error loading models or tokenizers: {e}")
 
-lstm_model = tf.keras.models.load_model('models/lstm_sentiment_model.h5')
-
-with open('models/tokenizer.json', 'r') as file:
-    tokenizer = json.load(file)
-
-bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-bert_model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=3)
-
+# Model details
 model_details = {
     "Random Forest": {
         "accuracy": "97%",
@@ -70,7 +66,7 @@ model_details = {
     }
 }
 
-# Preprocessing Functions
+# Preprocessing functions
 def preprocess_for_lstm(tweet, tokenizer):
     from tensorflow.keras.preprocessing.sequence import pad_sequences
     word_index = tokenizer.get("word_index", {})
@@ -83,13 +79,11 @@ def preprocess_for_bert(tweet):
         None,
         add_special_tokens=True,
         max_length=50,
-        pad_to_max_length=True,
-        return_token_type_ids=True
+        padding="max_length",
+        truncation=True,
+        return_tensors="pt"
     )
-    return {
-        "input_ids": torch.tensor(inputs["input_ids"]).unsqueeze(0),
-        "attention_mask": torch.tensor(inputs["attention_mask"]).unsqueeze(0)
-    }
+    return inputs
 
 def predict_sentiment(tweet, model_info):
     model = model_info["model"]
@@ -133,29 +127,36 @@ tweet = st.text_input("💬 Enter your tweet below:")
 if st.button("🚀 Predict Sentiment"):
     if tweet:
         with st.spinner("Predicting sentiment..."):
-            prediction = predict_sentiment(tweet, model_info)
-            sentiment = ["Negative", "Neutral", "Positive"][prediction]
-            st.success(f"🎯 The predicted sentiment is: **{sentiment}**")
+            try:
+                prediction = predict_sentiment(tweet, model_info)
+                sentiment = ["Negative", "Neutral", "Positive"][prediction]
+                st.success(f"🎯 The predicted sentiment is: **{sentiment}**")
 
-            # Probability distribution visualization
-            probabilities = np.random.dirichlet(np.ones(3), size=1)[0]  # Mock probabilities for demo
-            labels = ["Negative", "Neutral", "Positive"]
+                # Probability visualization (mocked for non-transformers models)
+                if model_info["type"] == "transformers":
+                    inputs = preprocess_for_bert(tweet)
+                    outputs = model_info["model"](**inputs)
+                    probabilities = torch.softmax(outputs.logits, dim=1).detach().numpy()[0]
+                else:
+                    probabilities = np.random.dirichlet(np.ones(3), size=1)[0]  # Mock probabilities for demo
+                
+                labels = ["Negative", "Neutral", "Positive"]
+                fig = px.bar(
+                    x=labels, y=probabilities,
+                    color=labels, color_discrete_map={"Negative": "red", "Neutral": "blue", "Positive": "green"},
+                    title="Sentiment Probability Distribution",
+                    labels={"x": "Sentiment", "y": "Probability"}
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
-            # Plotly bar chart for probabilities
-            fig = px.bar(
-                x=labels, y=probabilities,
-                color=labels, color_discrete_map={"Negative": "red", "Neutral": "blue", "Positive": "green"},
-                title="Sentiment Probability Distribution",
-                labels={"x": "Sentiment", "y": "Probability"}
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-            # Export functionality
-            st.download_button(
-                label="📥 Download Prediction",
-                data=f"Tweet: {tweet}\nSentiment: {sentiment}",
-                file_name="prediction.txt",
-                mime="text/plain"
-            )
+                # Export functionality
+                st.download_button(
+                    label="📥 Download Prediction",
+                    data=f"Tweet: {tweet}\nSentiment: {sentiment}",
+                    file_name="prediction.txt",
+                    mime="text/plain"
+                )
+            except Exception as e:
+                st.error(f"Error during prediction: {e}")
     else:
         st.warning("⚠️ Please enter a tweet.")
