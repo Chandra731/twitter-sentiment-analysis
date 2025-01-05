@@ -47,7 +47,7 @@ Twitter-Sentiment-Analysis
 
 ## Requirements
 To run the project, install the necessary dependencies using the following command:
-```bash
+```
 pip install -r requirements.txt
 ```
 
@@ -55,7 +55,7 @@ pip install -r requirements.txt
 ### Running the App
 1. Navigate to the `app` directory.
 2. Run the Streamlit app:
-   ```bash
+   ```
    streamlit run main.py
    ```
 3. Open the provided URL in your browser to interact with the app.
@@ -93,4 +93,4 @@ This project is licensed under the [MIT License](LICENSE).
 - Libraries used include Scikit-learn, TensorFlow, PyTorch, and Streamlit.
 
 ## Contact
-For any inquiries or suggestions, please contact [Your Name] at [Your Email].
+For any inquiries or suggestions, please contact [chandra] at [chandrabrucelee31@gmail.com].
