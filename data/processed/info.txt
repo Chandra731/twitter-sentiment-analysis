@@ -1,0 +1,6 @@
+**All these csv files will be generated once you execute the Notebooks**
+
+├── clean_test.csv           # Preprocessed test dataset
+├── clean_train.csv          # Preprocessed train dataset
+├── test.csv                 # Test dataset
+└── train.csv                # Training dataset
