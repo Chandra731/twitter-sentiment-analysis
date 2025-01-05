@@ -1,0 +1,2 @@
+The tweets.db will be created once you execute the "notebooks/Bert_Model.ipynb". 
+This database is later used to train our BERT Model.
